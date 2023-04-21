@@ -40,12 +40,23 @@ impl Terminal {
         let height = self.rows;
         for row in 0..height {
             if row == height / 3 {
-                print!("Welcome to Text -- version {}", VERSION);
-                execute!(stdout(), MoveToNextLine(1)).unwrap();
+                self.draw_welcome();
             } else {
                 println!("~\r");
             }
         }
+    }
+
+    fn draw_welcome(&self) {
+        let message = format!("Welcome to Text -- version {}", VERSION);
+        let mess_len = message.len();
+        let width: usize = self.cols.into();
+        let padding = width.saturating_sub(mess_len) / 2;
+        let spaces = " ".repeat(padding);
+        let mut message = format!("~{}{}", spaces, message);
+        message.truncate(width);
+        print!("{}", message);
+        execute!(stdout(), MoveToNextLine(1)).unwrap();
     }
 
     pub fn exit(&self) {
