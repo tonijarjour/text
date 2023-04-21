@@ -58,7 +58,7 @@ impl Terminal {
         print!("{message}");
     }
 
-    pub fn exit(&self) {
+    pub fn exit() {
         execute!(stdout(), crossterm::terminal::LeaveAlternateScreen).ok();
         crossterm::terminal::disable_raw_mode().ok();
     }
