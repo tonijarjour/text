@@ -1,8 +1,8 @@
 use crate::terminal::Terminal;
-use crossterm::cursor::MoveTo;
+//use crossterm::cursor::MoveTo;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
-use crossterm::execute;
-use std::io::{stdout, Write};
+//use crossterm::execute;
+//use std::io::{stdout, Write};
 
 #[derive(Default)]
 pub struct Editor {
@@ -10,16 +10,10 @@ pub struct Editor {
 }
 
 impl Editor {
-    pub fn new() -> Self {
-        Self {
-            terminal: Terminal::default(),
-        }
-    }
-
     pub fn run(&mut self) {
-        self.setup();
+        self.terminal.setup();
         self.read_event();
-        Self::exit();
+        self.terminal.exit();
     }
 
     fn read_event(&mut self) {
@@ -53,24 +47,5 @@ impl Editor {
             },
             _ => Some(()),
         }
-    }
-
-    fn setup(&self) {
-        execute!(stdout(), crossterm::terminal::EnterAlternateScreen).unwrap();
-        crossterm::terminal::enable_raw_mode().unwrap();
-        execute!(stdout(), MoveTo(0, 0));
-
-        self.draw_rows();
-    }
-
-    fn draw_rows(&self) {
-        for _ in 0..self.terminal.rows {
-            println!("~\r");
-        }
-    }
-
-    fn exit() {
-        execute!(stdout(), crossterm::terminal::LeaveAlternateScreen).ok();
-        crossterm::terminal::disable_raw_mode().ok();
     }
 }

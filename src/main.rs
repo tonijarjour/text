@@ -1,6 +1,8 @@
 mod editor;
 mod terminal;
-use crate::editor::Editor;
+use editor::Editor;
+
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     let mut editor = Editor::default();
