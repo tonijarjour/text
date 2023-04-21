@@ -1,36 +1,48 @@
+use crate::terminal::Terminal;
+use crossterm::cursor::MoveTo;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::execute;
 use std::io::{stdout, Write};
 
 #[derive(Default)]
-pub struct Editor {}
+pub struct Editor {
+    terminal: Terminal,
+}
 
 impl Editor {
-    pub fn run() {
-        Self::setup();
-        Self::read_keys();
+    pub fn new() -> Self {
+        Self {
+            terminal: Terminal::default(),
+        }
+    }
+
+    pub fn run(&mut self) {
+        self.setup();
+        self.read_event();
         Self::exit();
     }
 
-    fn read_keys() {
-        while let Ok(Event::Key(keycode)) = event::read() {
-            if Self::match_keycode(keycode).is_none() {
-                break;
+    fn read_event(&mut self) {
+        while let Ok(event) = event::read() {
+            match event {
+                Event::Key(keycode) => {
+                    if Self::match_keycode(keycode).is_none() {
+                        break;
+                    }
+                }
+                Event::Resize(rows, cols) => self.terminal.set_size(rows, cols),
+                _ => (),
             }
         }
     }
 
-    fn match_keycode(keycode: KeyEvent) -> Option<()> {
+    const fn match_keycode(keycode: KeyEvent) -> Option<()> {
         match keycode {
             KeyEvent {
                 code: KeyCode::Char(key),
                 modifiers: KeyModifiers::NONE,
                 ..
-            } => {
-                print!("{key}");
-                stdout().flush().unwrap();
-                Some(())
-            }
+            } => Some(()),
             KeyEvent {
                 code: KeyCode::Char(key),
                 modifiers: KeyModifiers::CONTROL,
@@ -43,9 +55,18 @@ impl Editor {
         }
     }
 
-    fn setup() {
+    fn setup(&self) {
         execute!(stdout(), crossterm::terminal::EnterAlternateScreen).unwrap();
         crossterm::terminal::enable_raw_mode().unwrap();
+        execute!(stdout(), MoveTo(0, 0));
+
+        self.draw_rows();
+    }
+
+    fn draw_rows(&self) {
+        for _ in 0..self.terminal.rows {
+            println!("~\r");
+        }
     }
 
     fn exit() {

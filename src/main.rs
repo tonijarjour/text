@@ -1,6 +1,8 @@
 mod editor;
-use editor::Editor;
+mod terminal;
+use crate::editor::Editor;
 
 fn main() {
-    Editor::run();
+    let mut editor = Editor::default();
+    editor.run();
 }
