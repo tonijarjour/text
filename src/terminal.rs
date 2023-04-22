@@ -40,8 +40,6 @@ impl Terminal {
         for row in 0..height {
             if row == height / 3 {
                 self.draw_welcome();
-            } else {
-                print!("~");
             }
             execute!(stdout(), MoveToNextLine(1)).unwrap();
         }
@@ -53,7 +51,7 @@ impl Terminal {
         let width: usize = self.cols.into();
         let padding = width.saturating_sub(mess_len) / 2;
         let spaces = " ".repeat(padding);
-        let mut message = format!("~{spaces}{message}");
+        let mut message = format!("{spaces}{message}");
         message.truncate(width);
         print!("{message}");
     }

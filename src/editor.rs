@@ -1,7 +1,10 @@
+use crate::document::Document;
+use crate::document::Line;
 use crate::terminal::Terminal;
-use crossterm::cursor::{MoveDown, MoveLeft, MoveRight, MoveTo, MoveUp};
+use crossterm::cursor::{MoveDown, MoveLeft, MoveRight, MoveTo, MoveToNextLine, MoveUp};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::execute;
+use crossterm::terminal::{self, Clear};
 use std::io::stdout;
 
 #[derive(Default)]
@@ -20,17 +23,49 @@ impl Position {
     }
 }
 
-#[derive(Default)]
 pub struct Editor {
     terminal: Terminal,
     position: Position,
+    document: Document,
+}
+
+impl Default for Editor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Editor {
+    pub fn new() -> Self {
+        Self {
+            terminal: Terminal::default(),
+            position: Position::default(),
+            document: Document::open(),
+        }
+    }
+
     pub fn run(&mut self) {
         self.terminal.setup();
+        self.display_document();
         self.read_event();
         Terminal::exit();
+    }
+
+    fn draw_line(&self, line: &Line) {
+        let end = self.terminal.cols as usize;
+        let line = line.render(0, end);
+        print!("{line}");
+        execute!(stdout(), MoveToNextLine(1)).unwrap();
+    }
+
+    fn display_document(&self) {
+        execute!(stdout(), Clear(terminal::ClearType::All)).unwrap();
+        execute!(stdout(), MoveTo(0, 0)).unwrap();
+        for row in 0..self.terminal.rows {
+            if let Some(line) = self.document.get_line(row as usize) {
+                self.draw_line(line);
+            }
+        }
     }
 
     fn read_event(&mut self) {
