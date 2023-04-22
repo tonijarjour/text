@@ -18,6 +18,10 @@ impl Line {
         let start = cmp::min(start, end);
         self.data.get(start..end).unwrap_or_default().to_string()
     }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
 }
 
 #[derive(Default)]

@@ -4,8 +4,6 @@ mod terminal;
 use editor::Editor;
 use std::env;
 
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-
 fn main() {
     let args: Vec<String> = env::args().collect();
     let mut editor = if args.len() > 1 {
