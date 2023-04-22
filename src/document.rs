@@ -26,10 +26,14 @@ pub struct Document {
 }
 
 impl Document {
-    pub fn open() -> Self {
+    pub fn open(file_path: &String) -> Result<Self, std::io::Error> {
+        let file = std::fs::read_to_string(file_path)?;
         let mut lines = Vec::new();
-        lines.push(Line::from("Hello, World!"));
-        Self { lines }
+        for line in file.lines() {
+            lines.push(Line::from(line));
+        }
+
+        Ok(Self { lines })
     }
 
     pub fn get_line(&self, index: usize) -> Option<&Line> {

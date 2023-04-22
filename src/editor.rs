@@ -35,18 +35,30 @@ impl Default for Editor {
     }
 }
 
+impl From<&String> for Editor {
+    fn from(file_path: &String) -> Self {
+        Self {
+            terminal: Terminal::default(),
+            position: Position::default(),
+            document: Document::open(file_path).unwrap_or_default(),
+        }
+    }
+}
+
 impl Editor {
     pub fn new() -> Self {
         Self {
             terminal: Terminal::default(),
             position: Position::default(),
-            document: Document::open(),
+            document: Document::default(),
         }
     }
 
     pub fn run(&mut self) {
         self.terminal.setup();
-        self.display_document();
+        if !self.document.lines.is_empty() {
+            self.display_document();
+        }
         self.read_event();
         Terminal::exit();
     }
@@ -66,6 +78,7 @@ impl Editor {
                 self.draw_line(line);
             }
         }
+        execute!(stdout(), MoveTo(0, 0)).unwrap();
     }
 
     fn read_event(&mut self) {
