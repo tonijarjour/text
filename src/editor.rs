@@ -88,7 +88,7 @@ impl Editor {
         }
     }
 
-    fn scroll_right(&mut self) -> Option<()> {
+    fn go_right(&mut self) -> Option<()> {
         let line_index = self.terminal.position.y as usize + self.offset.y;
         let line_end = self.document.lines[line_index].len().saturating_sub(1);
 
@@ -108,7 +108,7 @@ impl Editor {
         }
     }
 
-    fn scroll_left(&mut self) -> Option<()> {
+    fn go_left(&mut self) -> Option<()> {
         let (curs_x, _) = cursor::position().unwrap_or_default();
         if curs_x > 0 {
             let curs_x = curs_x.saturating_sub(1);
@@ -121,7 +121,7 @@ impl Editor {
         execute!(stdout(), MoveLeft(1)).ok()
     }
 
-    fn scroll_up(&mut self) -> Option<()> {
+    fn go_up(&mut self) -> Option<()> {
         if self.terminal.position.y > 0 {
             self.terminal
                 .position
@@ -134,7 +134,7 @@ impl Editor {
         execute!(stdout(), MoveTo(x_pos, self.terminal.position.y)).ok()
     }
 
-    fn scroll_down(&mut self) -> Option<()> {
+    fn go_down(&mut self) -> Option<()> {
         let curs_y = self.terminal.position.y.saturating_add(1);
         let offs_y = self.offset.y.saturating_add(1);
         if curs_y < self.terminal.rows {
@@ -163,6 +163,36 @@ impl Editor {
         .unwrap()
     }
 
+    fn line_end(&mut self) -> Option<()> {
+        self.terminal.position.set_x(0);
+        if self.offset.x > 0 {
+            self.offset.set_x(0);
+            self.display_document();
+        }
+        execute!(stdout(), MoveTo(0, self.terminal.position.y)).ok()
+    }
+
+    fn line_start(&mut self) -> Option<()> {
+        let line_index = self.terminal.position.y as usize + self.offset.y;
+        let line_len = self.document.lines[line_index].len();
+        let edge_pos = self.offset.x.saturating_add(self.terminal.cols.into());
+        let offset_needed = line_len.saturating_sub(edge_pos);
+        let x_pos = if offset_needed > 0 {
+            self.offset
+                .set_x(self.offset.x.saturating_add(offset_needed));
+            self.display_document();
+            self.terminal.cols.saturating_sub(1)
+        } else {
+            line_len
+                .saturating_sub(self.offset.x)
+                .saturating_sub(1)
+                .try_into()
+                .unwrap()
+        };
+        self.terminal.position.set_x(x_pos);
+        execute!(stdout(), MoveTo(x_pos, self.terminal.position.y)).ok()
+    }
+
     fn match_keycode(&mut self, keycode: KeyEvent) -> Option<()> {
         match keycode {
             KeyEvent {
@@ -170,24 +200,12 @@ impl Editor {
                 modifiers: KeyModifiers::NONE,
                 ..
             } => match key {
-                'h' => self.scroll_left(),
-                'j' => self.scroll_down(),
-                'k' => self.scroll_up(),
-                'l' => self.scroll_right(),
-                '0' => execute!(stdout(), MoveTo(0, self.terminal.position.y)).map_or(None, |_| {
-                    self.terminal.position.set_x(0);
-                    Some(())
-                }),
-                '$' => {
-                    let line_index = self.terminal.position.y as usize + self.offset.y;
-                    let line_len = self.document.lines[line_index].len();
-                    let x_pos: u16 =
-                        std::cmp::min(line_len.saturating_sub(1), self.terminal.cols.into())
-                            .try_into()
-                            .unwrap();
-                    self.terminal.position.set_x(x_pos);
-                    execute!(stdout(), MoveTo(x_pos, self.terminal.position.y)).ok()
-                }
+                'h' => self.go_left(),
+                'j' => self.go_down(),
+                'k' => self.go_up(),
+                'l' => self.go_right(),
+                '0' => self.line_end(),
+                '$' => self.line_start(),
                 _ => Some(()),
             },
             KeyEvent {
