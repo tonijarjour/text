@@ -1,5 +1,6 @@
 use std::cmp;
 
+#[derive(Default)]
 pub struct Line {
     data: String,
 }
@@ -24,9 +25,16 @@ impl Line {
     }
 }
 
-#[derive(Default)]
 pub struct Document {
     pub lines: Vec<Line>,
+}
+
+impl Default for Document {
+    fn default() -> Self {
+        Self {
+            lines: Vec::from([Line::default()]),
+        }
+    }
 }
 
 impl Document {
@@ -42,5 +50,9 @@ impl Document {
 
     pub fn get_line(&self, index: usize) -> Option<&Line> {
         self.lines.get(index)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.lines.len() == 1 && self.lines[0].len() == 0
     }
 }

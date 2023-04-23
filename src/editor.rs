@@ -42,7 +42,7 @@ impl From<&str> for Editor {
 
 impl Editor {
     pub fn run(&mut self) {
-        let is_empty = self.document.lines.is_empty();
+        let is_empty = self.document.is_empty();
         self.terminal.setup(is_empty);
         if !is_empty {
             self.display_document();
@@ -94,13 +94,13 @@ impl Editor {
 
         let (curs_x, _) = cursor::position().unwrap_or_default();
         if curs_x < self.terminal.cols.saturating_sub(1)
-            && usize::from(curs_x).saturating_add(self.offset.x) < line_end
+            && self.offset.x.saturating_add(curs_x.into()) < line_end
         {
             self.terminal.position.set_x(curs_x.saturating_add(1));
             execute!(stdout(), MoveRight(1)).ok()
         } else {
             let offs_x = self.offset.x.saturating_add(1);
-            if usize::from(curs_x).saturating_add(offs_x) <= line_end {
+            if offs_x.saturating_add(curs_x.into()) <= line_end {
                 self.offset.set_x(offs_x);
                 self.display_document();
             }
@@ -130,31 +130,42 @@ impl Editor {
             self.offset.set_y(self.offset.y.saturating_sub(1));
         }
         let x_pos = self.line_into_view();
-        self.display_document();
         execute!(stdout(), MoveTo(x_pos, self.terminal.position.y)).ok()
     }
 
     fn go_down(&mut self) -> Option<()> {
         let curs_y = self.terminal.position.y.saturating_add(1);
         let offs_y = self.offset.y.saturating_add(1);
-        if curs_y < self.terminal.rows {
+        if curs_y < self.terminal.rows
+            && self.offset.y.saturating_add(curs_y.into()) < self.document.lines.len()
+        {
             self.terminal.position.set_y(curs_y);
-        } else if offs_y < self.document.lines.len() - self.terminal.rows as usize {
+        } else if curs_y == self.terminal.rows
+            && offs_y < self.document.lines.len() - self.terminal.rows as usize
+        {
             self.offset.set_y(offs_y);
         }
         let x_pos = self.line_into_view();
-        self.display_document();
         execute!(stdout(), MoveTo(x_pos, self.terminal.position.y)).ok()
     }
 
     fn line_into_view(&mut self) -> u16 {
-        let line_index = self.terminal.position.y as usize + self.offset.y;
+        if self.document.is_empty() {
+            return 0;
+        }
+
+        let line_index = self
+            .offset
+            .y
+            .saturating_add(self.terminal.position.y.into());
         let line_end = self.document.lines[line_index].len().saturating_sub(1);
         let eol_to_offset = self.offset.x.saturating_sub(line_end);
         if eol_to_offset > 0 {
             self.offset
                 .set_x(self.offset.x.saturating_sub(eol_to_offset));
         }
+        self.display_document();
+
         std::cmp::min(
             line_end.saturating_sub(self.offset.x),
             self.terminal.position.x.into(),
