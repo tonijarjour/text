@@ -30,7 +30,7 @@ pub struct Document {
 }
 
 impl Document {
-    pub fn open(file_path: &String) -> Result<Self, std::io::Error> {
+    pub fn open(file_path: &str) -> Result<Self, std::io::Error> {
         let file = std::fs::read_to_string(file_path)?;
         let mut lines = Vec::new();
         for line in file.lines() {

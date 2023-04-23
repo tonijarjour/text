@@ -1,4 +1,4 @@
-use crossterm::cursor::{Hide, MoveTo, MoveToNextLine, Show};
+use crossterm::cursor::MoveTo;
 use crossterm::execute;
 use std::io::stdout;
 
@@ -28,12 +28,6 @@ pub struct Terminal {
 
 impl Default for Terminal {
     fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Terminal {
-    pub fn new() -> Self {
         let Ok((cols, rows)) = crossterm::terminal::size() else { panic!(); };
         Self {
             rows,
@@ -41,7 +35,9 @@ impl Terminal {
             position: Position::default(),
         }
     }
+}
 
+impl Terminal {
     pub fn set_size(&mut self, rows: u16, cols: u16) {
         self.rows = rows;
         self.cols = cols;
@@ -51,24 +47,13 @@ impl Terminal {
         (self.position.x, self.position.y)
     }
 
-    pub fn setup(&self) {
+    pub fn setup(&self, is_empty: bool) {
         execute!(stdout(), crossterm::terminal::EnterAlternateScreen).unwrap();
-        execute!(stdout(), Hide).unwrap();
-        execute!(stdout(), MoveTo(0, 0)).unwrap();
-        self.draw_rows();
-        execute!(stdout(), MoveTo(0, 0)).unwrap();
-        execute!(stdout(), Show).unwrap();
-        crossterm::terminal::enable_raw_mode().unwrap();
-    }
-
-    fn draw_rows(&self) {
-        let height = self.rows;
-        for row in 0..height {
-            if row == height / 3 {
-                self.draw_welcome();
-            }
-            execute!(stdout(), MoveToNextLine(1)).unwrap();
+        if is_empty {
+            self.draw_welcome();
         }
+        execute!(stdout(), MoveTo(0, 0)).unwrap();
+        crossterm::terminal::enable_raw_mode().unwrap();
     }
 
     fn draw_welcome(&self) {
@@ -79,6 +64,7 @@ impl Terminal {
         let spaces = " ".repeat(padding);
         let mut message = format!("{spaces}{message}");
         message.truncate(width);
+        execute!(stdout(), MoveTo(0, self.rows / 3)).unwrap();
         print!("{message}");
     }
 

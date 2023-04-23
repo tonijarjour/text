@@ -8,7 +8,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let mut editor = if args.len() > 1 {
         let file_path = &args[1];
-        Editor::from(file_path)
+        Editor::from(file_path.as_str())
     } else {
         Editor::default()
     };
