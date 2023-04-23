@@ -69,7 +69,7 @@ impl Editor {
             }
         }
 
-        let (curs_x, curs_y) = self.terminal.get_pos();
+        let (curs_x, curs_y) = self.terminal.get_xy();
         execute!(stdout(), MoveTo(curs_x, curs_y)).unwrap();
         execute!(stdout(), Show).unwrap();
     }
@@ -129,22 +129,31 @@ impl Editor {
     fn scroll_right(&mut self) -> Option<()> {
         let (curs_x, _) = cursor::position().unwrap_or_default();
         let curs_x = curs_x.saturating_add(1);
-        //let offs_x = self.offset.x.saturating_add(1);
 
         let line_index = self.terminal.position.y as usize + self.offset.y;
         let line_len = self.document.lines[line_index].len();
 
-        if curs_x < self.terminal.cols && usize::from(curs_x) < line_len {
+        if curs_x < self.terminal.cols
+            && usize::from(curs_x).saturating_add(self.offset.x) < line_len
+        {
             self.terminal.position.set_x(curs_x);
+            execute!(stdout(), MoveRight(1)).ok()
+        } else {
+            let offs_x = self.offset.x.saturating_add(1);
+            if usize::from(curs_x).saturating_add(offs_x) < line_len {
+                self.offset.set_x(offs_x);
+                self.display_document();
+            }
+            Some(())
         }
-        execute!(stdout(), MoveRight(1)).ok()
     }
 
     fn scroll_left(&mut self) -> Option<()> {
-        if self.terminal.position.x > 0 {
-            self.terminal
-                .position
-                .set_x(self.terminal.position.x.saturating_sub(1));
+        let (curs_x, _) = cursor::position().unwrap_or_default();
+
+        if curs_x > 0 {
+            let curs_x = curs_x.saturating_sub(1);
+            self.terminal.position.set_x(curs_x);
         } else {
             self.offset.set_x(self.offset.x.saturating_sub(1));
             self.display_document();
