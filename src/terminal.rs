@@ -43,7 +43,7 @@ impl Terminal {
         self.cols = cols;
     }
 
-    pub fn get_xy(&self) -> (u16, u16) {
+    pub const fn get_xy(&self) -> (u16, u16) {
         (self.position.x, self.position.y)
     }
 

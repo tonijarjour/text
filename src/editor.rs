@@ -88,22 +88,49 @@ impl Editor {
         }
     }
 
+    fn scroll_right(&mut self) -> Option<()> {
+        let line_index = self.terminal.position.y as usize + self.offset.y;
+        let line_end = self.document.lines[line_index].len().saturating_sub(1);
+
+        let (curs_x, _) = cursor::position().unwrap_or_default();
+        if curs_x < self.terminal.cols.saturating_sub(1)
+            && usize::from(curs_x).saturating_add(self.offset.x) < line_end
+        {
+            self.terminal.position.set_x(curs_x.saturating_add(1));
+            execute!(stdout(), MoveRight(1)).ok()
+        } else {
+            let offs_x = self.offset.x.saturating_add(1);
+            if usize::from(curs_x).saturating_add(offs_x) <= line_end {
+                self.offset.set_x(offs_x);
+                self.display_document();
+            }
+            Some(())
+        }
+    }
+
+    fn scroll_left(&mut self) -> Option<()> {
+        let (curs_x, _) = cursor::position().unwrap_or_default();
+        if curs_x > 0 {
+            let curs_x = curs_x.saturating_sub(1);
+            self.terminal.position.set_x(curs_x);
+        } else if self.offset.x > 0 {
+            self.offset.set_x(self.offset.x.saturating_sub(1));
+            self.display_document();
+        }
+
+        execute!(stdout(), MoveLeft(1)).ok()
+    }
+
     fn scroll_up(&mut self) -> Option<()> {
         if self.terminal.position.y > 0 {
             self.terminal
                 .position
                 .set_y(self.terminal.position.y.saturating_sub(1));
-        } else {
+        } else if self.offset.y > 0 {
             self.offset.set_y(self.offset.y.saturating_sub(1));
-            self.display_document();
         }
-
-        let line_index = self.terminal.position.y as usize + self.offset.y;
-        let line_len = self.document.lines[line_index].len();
-        let x_pos: u16 = std::cmp::min(line_len.saturating_sub(1), self.terminal.position.x.into())
-            .try_into()
-            .unwrap();
-
+        let x_pos = self.line_into_view();
+        self.display_document();
         execute!(stdout(), MoveTo(x_pos, self.terminal.position.y)).ok()
     }
 
@@ -114,52 +141,26 @@ impl Editor {
             self.terminal.position.set_y(curs_y);
         } else if offs_y < self.document.lines.len() - self.terminal.rows as usize {
             self.offset.set_y(offs_y);
-            self.display_document();
         }
-
-        let line_index = self.terminal.position.y as usize + self.offset.y;
-        let line_len = self.document.lines[line_index].len();
-        let x_pos: u16 = std::cmp::min(line_len.saturating_sub(1), self.terminal.position.x.into())
-            .try_into()
-            .unwrap();
-
+        let x_pos = self.line_into_view();
+        self.display_document();
         execute!(stdout(), MoveTo(x_pos, self.terminal.position.y)).ok()
     }
 
-    fn scroll_right(&mut self) -> Option<()> {
-        let (curs_x, _) = cursor::position().unwrap_or_default();
-        let curs_x = curs_x.saturating_add(1);
-
+    fn line_into_view(&mut self) -> u16 {
         let line_index = self.terminal.position.y as usize + self.offset.y;
-        let line_len = self.document.lines[line_index].len();
-
-        if curs_x < self.terminal.cols
-            && usize::from(curs_x).saturating_add(self.offset.x) < line_len
-        {
-            self.terminal.position.set_x(curs_x);
-            execute!(stdout(), MoveRight(1)).ok()
-        } else {
-            let offs_x = self.offset.x.saturating_add(1);
-            if usize::from(curs_x).saturating_add(offs_x) < line_len {
-                self.offset.set_x(offs_x);
-                self.display_document();
-            }
-            Some(())
+        let line_end = self.document.lines[line_index].len().saturating_sub(1);
+        let eol_to_offset = self.offset.x.saturating_sub(line_end);
+        if eol_to_offset > 0 {
+            self.offset
+                .set_x(self.offset.x.saturating_sub(eol_to_offset));
         }
-    }
-
-    fn scroll_left(&mut self) -> Option<()> {
-        let (curs_x, _) = cursor::position().unwrap_or_default();
-
-        if curs_x > 0 {
-            let curs_x = curs_x.saturating_sub(1);
-            self.terminal.position.set_x(curs_x);
-        } else {
-            self.offset.set_x(self.offset.x.saturating_sub(1));
-            self.display_document();
-        }
-
-        execute!(stdout(), MoveLeft(1)).ok()
+        std::cmp::min(
+            line_end.saturating_sub(self.offset.x),
+            self.terminal.position.x.into(),
+        )
+        .try_into()
+        .unwrap()
     }
 
     fn match_keycode(&mut self, keycode: KeyEvent) -> Option<()> {
